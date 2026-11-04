@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f2efe8">
+  <title>Seed preview — Neon Weather</title>
+  <link rel="stylesheet" href="theme.css"><script src="theme.js"></script>
+  <style>
+    :root{color-scheme:light;--paper:#f2efe8;--ink:#23231f;--muted:#77766f;--line:#d8d4ca;--card:#f8f6f0}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:0 24px;display:flex;justify-content:center;background:var(--paper);color:var(--ink);font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}.wrap{width:min(100%,620px)}header{height:76px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);margin-bottom:42px}.brand{font:700 .84rem Arial,Helvetica,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);text-decoration:none}.brand span{color:#b74432}h1{font:500 2rem/1.1 Arial,Helvetica,sans-serif;letter-spacing:-.04em;margin:0}.sub{font-size:.72rem;color:var(--muted);margin:.4rem 0 1.4rem}.card{background:var(--card);border:1px solid var(--line);padding:1.2rem}.row{display:flex;gap:.5rem;margin-bottom:.8rem}input{flex:1;min-width:0;padding:.65rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:inherit}button{padding:.55rem .8rem;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font:inherit;cursor:pointer}.art{width:100%;aspect-ratio:1;border:1px solid var(--line);background:#fff}.art svg{width:100%;height:100%;display:block}.meta{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:.65rem;margin-top:.5rem}.uri{margin-top:.6rem;padding:.6rem;background:var(--paper);color:var(--muted);font-size:.58rem;word-break:break-all;max-height:6rem;overflow:auto}.note{font: .78rem/1.6 Arial,Helvetica,sans-serif;color:var(--muted);margin:1rem 0 0}.back{display:inline-block;margin-top:20px;color:var(--ink);font:.75rem Arial,Helvetica,sans-serif;text-underline-offset:4px}
+    @media(max-width:600px){body{padding:0 16px}.row{flex-wrap:wrap}.row input{flex-basis:100%}header{margin-bottom:28px}}
+  </style>
+</head>
+<body><div class="wrap">
+  <header><a class="brand" href="index.html"><span>◉</span> Neon Weather</a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">Dark mode</button></header>
+  <main>
+    <h1>Seed preview</h1><p class="sub">9 × 9 cross bands · crosswave flow · seed-derived palette and 6s / 8s / 10s loop</p>
+    <section class="card" aria-label="Local seed renderer">
+      <div class="row"><input id="seed" value="1234567890123456789" inputmode="numeric" aria-label="Decimal seed"><button id="render" type="button">Render</button></div>
+      <div class="art" id="art" aria-label="Generated SVG artwork"></div>
+      <div class="meta"><span id="seedLabel">Seed —</span><span id="bytes">— bytes</span></div>
+      <div class="uri" id="uri" aria-label="Base64 SVG data URI"></div>
+      <p class="note">Paste a decimal seed to preview the fixed crosswave. The contract-side SVG renderer still needs to be matched to this preview before deployment.</p>
+    </section>
+    <a class="back" href="about.html">← Back to Neon Weather</a>
+  </main>
+</div>
+<script src="generator.js"></script>
+<script>
+  function render(){
+    const input=document.getElementById("seed"), text=input.value.trim();
+    if(!/^\d+$/.test(text)){input.setAttribute("aria-invalid","true");input.focus();return;}
+    input.removeAttribute("aria-invalid");
+    const svg=NeonWeatherGen.renderSVG(text), encoded=btoa(svg), uri="data:image/svg+xml;base64,"+encoded;
+    document.getElementById("art").innerHTML=svg;
+    document.getElementById("uri").textContent=uri;
+    document.getElementById("seedLabel").textContent="Seed "+text;
+    const tempo=NeonWeatherGen.propertiesFor(text).seconds;
+    document.getElementById("bytes").textContent=tempo+"s loop · "+new TextEncoder().encode(uri).length+" URI bytes";
+  }
+  document.getElementById("render").addEventListener("click",render);
+  document.getElementById("seed").addEventListener("keydown",e=>{if(e.key==="Enter")render();});
+  render();
+</script>
+</body></html>

@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f2efe8">
+  <title>Gallery — Neon Weather</title>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
+  <style>
+    :root{color-scheme:light;--paper:#f2efe8;--ink:#23231f;--muted:#77766f;--line:#d8d4ca;--accent:#b74432;--card:#f8f6f0}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 Arial,Helvetica,sans-serif}
+    .shell{width:min(1120px,calc(100% - 48px));margin:auto}
+    header{height:78px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+    .brand{font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:inherit;text-decoration:none}
+    .brand span{color:var(--accent)}
+    nav{display:flex;gap:24px;align-items:center}
+    nav a{color:var(--muted);text-decoration:none;font-size:.82rem}
+    nav a[aria-current=page]{color:var(--ink)}
+    main{padding:72px 0 100px}
+    .eyebrow{font:.7rem ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+    .title-row{display:flex;align-items:end;justify-content:space-between;gap:24px;margin:15px 0 12px}
+    h1{font-size:clamp(2.7rem,6vw,5.4rem);line-height:1;letter-spacing:-.065em;font-weight:500;margin:0}
+    .lead{max-width:460px;color:var(--muted);margin:0 0 4px}
+    .controls{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;margin:30px 0 24px;flex-wrap:wrap}
+    .count,.status{font:.72rem ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted)}
+    button{font:inherit;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:8px 11px;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    button.download{margin-top:12px;width:100%;font-size:.72rem;letter-spacing:.04em;border-color:var(--accent);color:var(--accent)}
+    .status{min-height:1.6em;margin:14px 0 20px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+    .art-card{background:var(--card);border:1px solid var(--line);min-width:0}
+    .art-card.mine{border-color:var(--accent)}
+    .art-link{display:block;aspect-ratio:1/1;padding:16px;background:#fff}
+    .art-link img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+    .art-placeholder{display:grid;place-items:center;color:var(--muted);height:100%;font-size:.75rem}
+    .details{padding:15px 16px 17px}
+    .token-name{font-size:1rem;margin:0 0 14px;font-weight:500}
+    .meta-row{display:grid;grid-template-columns:70px 1fr;gap:10px;margin:6px 0;font:.7rem ui-monospace,SFMono-Regular,Consolas,monospace}
+    .meta-row span:first-child{color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .meta-row a{color:var(--ink);overflow-wrap:anywhere}
+    .badge{display:inline-block;font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+    .empty{padding:54px 20px;border:1px dashed var(--line);text-align:center;color:var(--muted);grid-column:1/-1}
+    footer{border-top:1px solid var(--line);padding:18px 0 28px;color:var(--muted);font-size:.72rem}
+    footer a{color:inherit}
+    .note{font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.4}
+    @media(max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.title-row{display:block}.lead{margin-top:18px}}
+    @media(max-width:520px){.shell{width:calc(100% - 32px)}header{height:auto;min-height:70px;align-items:flex-start;padding:20px 0;gap:16px;flex-direction:column}nav{gap:16px;flex-wrap:wrap}.grid{grid-template-columns:1fr 1fr;gap:10px}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <a class="brand" href="index.html"><span>◉</span> Neon Weather</a>
+    <nav>
+      <a href="about.html">About</a>
+      <a href="mint.html">Mint</a>
+      <a href="gallery.html" aria-current="page">Gallery</a>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">Dark mode</button>
+    </nav>
+  </header>
+  <main>
+    <div class="eyebrow">Same rules. Different outcomes.</div>
+    <div class="title-row">
+      <h1>The collection.</h1>
+      <p class="lead">Browse minted works. Connect your wallet to download the animated SVG of pieces you own.</p>
+    </div>
+    <div class="controls">
+      <span class="count">MAINNET</span>
+      <button type="button" id="connect">Connect wallet</button>
+      <span class="count" id="count">— works</span>
+    </div>
+    <div id="status" class="status" aria-live="polite">Loading the collection…</div>
+    <p class="note">Download is available only for tokens your connected wallet owns. SVG animates in browsers; for Twitter/X, screen-record or convert to GIF/video.</p>
+    <section id="gallery" class="grid" aria-label="Minted artworks"></section>
+  </main>
+  <footer>
+    Data provided by <a href="https://tzkt.io/" target="_blank" rel="noopener">TzKT API</a>
+    · Mainnet
+    · <a id="contractLink" href="https://tzkt.io/KT1Qetmt4Ak6vjy8BW3Y8M393yZiScvwo1am" target="_blank" rel="noopener">Contract</a>
+  </footer>
+</div>
+<script src="https://unpkg.com/@taquito/taquito@25.0.0/dist/taquito.min.js"></script>
+<script src="project-config.js"></script>
+<script src="generator.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const CONTRACT = "KT1Qetmt4Ak6vjy8BW3Y8M393yZiScvwo1am";
+  const cfg = (window.NEON_WEATHER && window.NEON_WEATHER.networks && window.NEON_WEATHER.networks.mainnet) || {};
+  const n = {
+    api: cfg.api || "https://api.tzkt.io/v1",
+    rpc: cfg.rpc || "https://rpc.tzkt.io/mainnet",
+    beacon: "mainnet",
+    contract: cfg.contract || CONTRACT,
+    explorer: cfg.explorer || "https://tzkt.io/",
+    market: cfg.market || "https://objkt.com/tokens/",
+    label: "Mainnet"
+  };
+
+  let address = null, owned = new Set(), tokensCache = [], beacon = null, Tezos = null;
+
+  function abbreviated(a) { return a ? a.slice(0, 7) + "…" + a.slice(-5) : "Unknown"; }
+  function setStatus(msg, kind) {
+    const el = $("status"); el.textContent = msg;
+    el.style.color = kind === "good" ? "#2a6b3c" : kind === "bad" ? "#a33" : "";
+  }
+  function safeLink(label, href) {
+    const a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = label; return a;
+  }
+  async function getAll(path) {
+    const out = []; let offset = 0; const limit = 200;
+    while (true) {
+      const sep = path.includes("?") ? "&" : "?";
+      const res = await fetch(n.api + path + sep + "limit=" + limit + "&offset=" + offset);
+      if (!res.ok) throw new Error("TzKT " + res.status);
+      const batch = await res.json(); out.push(...batch);
+      if (batch.length < limit) break; offset += limit;
+    }
+    return out;
+  }
+  function svgFromToken(token) {
+    const md = token.metadata || {};
+    const uri = md.artifactUri || md.displayUri || md.thumbnailUri || "";
+    if (uri.startsWith("data:image/svg+xml")) {
+      if (uri.includes(";base64,")) { try { return atob(uri.split(";base64,")[1]); } catch (_) {} }
+      const comma = uri.indexOf(",");
+      if (comma >= 0) { try { return decodeURIComponent(uri.slice(comma + 1)); } catch (_) {} }
+    }
+    const seed = md.seed != null ? String(md.seed) : null;
+    if (seed != null && window.NeonWeatherGen && NeonWeatherGen.renderSVG) return NeonWeatherGen.renderSVG(seed);
+    return null;
+  }
+  function downloadSvg(token) {
+    const svg = svgFromToken(token);
+    if (!svg) { setStatus("Could not build SVG for this token.", "bad"); return; }
+    const id = String(token.tokenId);
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "neon-weather-" + id + ".svg";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    setStatus("Downloaded neon-weather-" + id + ".svg", "good");
+  }
+  function makeCard(token) {
+    const id = String(token.tokenId), md = token.metadata || {}, isMine = owned.has(id);
+    const card = document.createElement("article");
+    card.className = "art-card" + (isMine ? " mine" : "");
+    const link = document.createElement("a");
+    link.className = "art-link"; link.href = n.market + n.contract + "/" + id; link.target = "_blank"; link.rel = "noopener";
+    const uri = md.artifactUri || md.displayUri || md.thumbnailUri;
+    if (uri) { const img = document.createElement("img"); img.src = uri; img.alt = md.name || ("Neon Weather #" + id); link.appendChild(img); }
+    else { const ph = document.createElement("div"); ph.className = "art-placeholder"; ph.textContent = "No preview"; link.appendChild(ph); }
+    card.appendChild(link);
+    const details = document.createElement("div"); details.className = "details";
+    if (isMine) { const badge = document.createElement("div"); badge.className = "badge"; badge.textContent = "Yours"; details.appendChild(badge); }
+    const title = document.createElement("h2"); title.className = "token-name"; title.textContent = md.name || ("Neon Weather #" + id); details.appendChild(title);
+    function row(label, node) {
+      const r = document.createElement("div"); r.className = "meta-row";
+      const l = document.createElement("span"); l.textContent = label;
+      const v = document.createElement("span"); if (typeof node === "string") v.textContent = node; else v.appendChild(node);
+      r.append(l, v); details.appendChild(r);
+    }
+    row("Token", safeLink("#" + id, n.explorer + n.contract + "/tokens/" + id));
+    if (md.seed) row("Seed", String(md.seed));
+    const attrs = md.attributes || [];
+    const palette = attrs.find((a) => a.name === "Palette");
+    const loop = attrs.find((a) => a.name === "Loop");
+    if (palette) row("Palette", palette.value);
+    if (loop) row("Loop", loop.value);
+    if (isMine) {
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = "download"; btn.textContent = "Download SVG";
+      btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); downloadSvg(token); });
+      details.appendChild(btn);
+    }
+    card.appendChild(details);
+    return card;
+  }
+  async function loadOwned() {
+    owned = new Set();
+    if (!address || !n.contract) return;
+    try {
+      const balances = await getAll("/tokens/balances?account=" + encodeURIComponent(address) + "&token.contract=" + encodeURIComponent(n.contract) + "&balance.gt=0");
+      for (const b of balances) {
+        const tid = b.token && b.token.tokenId != null ? String(b.token.tokenId) : null;
+        if (tid != null) owned.add(tid);
+      }
+    } catch (e) { console.warn(e); }
+  }
+  async function loadGallery() {
+    $("gallery").innerHTML = "";
+    $("contractLink").href = n.explorer + n.contract;
+    if (!n.contract) { setStatus("No contract address set."); $("count").textContent = "0 works"; return; }
+    setStatus("Loading indexed tokens…");
+    try {
+      const tokens = await getAll("/tokens?contract=" + encodeURIComponent(n.contract));
+      tokens.sort((a, b) => Number(a.tokenId) - Number(b.tokenId));
+      tokensCache = tokens;
+      await loadOwned();
+      for (const t of tokens) $("gallery").appendChild(makeCard(t));
+      $("count").textContent = tokens.length + (tokens.length === 1 ? " work" : " works");
+      setStatus(tokens.length
+        ? "Showing " + tokens.length + " work" + (tokens.length === 1 ? "" : "s") + (address ? " · " + owned.size + " owned" : " · connect wallet to download your pieces")
+        : "No minted tokens indexed yet.");
+      if (!tokens.length) {
+        const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "The first work is waiting to be made.";
+        $("gallery").appendChild(empty);
+      }
+    } catch (e) { setStatus("Failed to load gallery: " + (e.message || e), "bad"); }
+  }
+  async function connectWallet() {
+    try {
+      setStatus("Loading wallet connector…");
+      Tezos = new taquito.TezosToolkit(n.rpc);
+      const mod = await import("https://esm.sh/@taquito/beacon-wallet@25.0.0?bundle");
+      const BeaconWalletClass = mod.BeaconWallet;
+      if (typeof BeaconWalletClass !== "function") throw new Error("Beacon wallet library did not load.");
+      // network only at construction — not in requestPermissions
+      beacon = new BeaconWalletClass({
+        name: "Neon Weather",
+        preferredNetwork: "mainnet",
+        enableMetrics: false,
+      });
+      Tezos.setWalletProvider(beacon);
+      setStatus("Waiting for wallet…");
+      await beacon.requestPermissions();
+      address = await beacon.getPKH();
+      $("connect").textContent = abbreviated(address);
+      setStatus("Wallet connected. Loading your holdings…", "good");
+      await loadOwned();
+      $("gallery").innerHTML = "";
+      for (const t of tokensCache) $("gallery").appendChild(makeCard(t));
+      setStatus("Connected as " + abbreviated(address) + " · " + owned.size + " owned work" + (owned.size === 1 ? "" : "s") + " can be downloaded.", "good");
+    } catch (e) { setStatus("Wallet connection failed: " + (e.message || e), "bad"); }
+  }
+  $("connect").addEventListener("click", connectWallet);
+  loadGallery();
+})();
+</script>
+</body>
+</html>

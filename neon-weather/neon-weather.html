@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101219">
+  <title>Neon Weather · Generator preview</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101219; --panel:#191d27; --ink:#f4f4f1; --muted:#9ba2b3; --line:#343949; --hot:#f45b69; }
+    * { box-sizing:border-box }
+    body { margin:0; min-height:100vh; padding:32px 18px 56px; background:radial-gradient(ellipse at 50% -10%,#26364a 0,#101219 54%); color:var(--ink); font:15px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    main { width:min(980px,100%); margin:auto }
+    header { margin-bottom:24px }
+    h1 { margin:0; font-size:clamp(2rem,6vw,4rem); line-height:1; letter-spacing:-.07em; font-weight:750 }
+    header p { max-width:620px; color:var(--muted); margin:12px 0 0 }
+    .layout { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:18px; align-items:start }
+    .panel { border:1px solid var(--line); border-radius:14px; background:color-mix(in srgb,var(--panel) 93%,transparent); padding:18px }
+    .art-wrap { width:100%; aspect-ratio:1; overflow:hidden; background:#071b35; border-radius:9px; box-shadow:0 14px 55px #0008; }
+    .art-wrap svg { display:block; width:100%; height:100%; image-rendering:pixelated }
+    .art-caption { display:flex; justify-content:space-between; gap:12px; margin-top:11px; color:var(--muted); font-size:12px }
+    .controls { display:grid; gap:15px }
+    .meta-rule { display:flex; justify-content:space-between; gap:16px; padding-bottom:10px; border-bottom:1px solid var(--line); font-size:12px }
+    .meta-rule span { color:var(--muted); letter-spacing:.04em }
+    .meta-rule strong { font-weight:600 }
+    label { display:block; margin-bottom:6px; color:#d8dce5; font-size:12px; letter-spacing:.04em; text-transform:uppercase }
+    select,input { width:100%; border:1px solid var(--line); border-radius:7px; padding:11px 12px; background:#10141c; color:var(--ink); font:inherit }
+    .seed-row { display:grid; grid-template-columns:1fr auto; gap:8px }
+    button { cursor:pointer; border:0; border-radius:7px; padding:10px 14px; background:var(--hot); color:#1d1116; font:inherit; font-size:13px; font-weight:700 }
+    button.secondary { border:1px solid var(--line); background:#242a37; color:var(--ink) }
+    .swatches { display:flex; gap:7px; margin:14px 0 0 }
+    .swatch { width:27px; height:27px; border-radius:50%; border:1px solid #ffffff44 }
+    .note { margin:18px 0 0; padding:13px 15px; border-left:2px solid var(--hot); color:var(--muted); font-size:12px; background:#191d27aa }
+    .note strong { color:var(--ink) }
+    @media(max-width:720px) { .layout { grid-template-columns:1fr } }
+    @media(prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Neon Weather</h1>
+      <p id="subtitle">One rule: 9×9 cross bands, fixed crosswave flow. Each seed creates its own palette and 6s, 8s, or 10s tempo.</p>
+    </header>
+    <section class="layout" aria-label="Artwork and generator controls">
+      <div class="panel">
+        <div class="art-wrap" id="artwork" aria-live="polite"></div>
+        <div class="art-caption"><span>9 × 9 · Cross bands</span><span id="seed-label"></span></div>
+        <div class="swatches" id="swatches" aria-label="Selected palette"></div>
+      </div>
+      <div class="panel controls">
+        <div>
+          <label for="seed">Preview seed</label>
+          <div class="seed-row"><input id="seed" value="1234567890123456789" autocomplete="off"><button class="secondary" id="randomize" type="button">New seed</button></div>
+        </div>
+        <div class="meta-rule"><span>GEOMETRY</span><strong>Cross bands · 9×9</strong></div>
+        <div class="meta-rule"><span>FLOW</span><strong>Crosswave · fixed</strong></div>
+        <div class="meta-rule"><span>SEED CREATES</span><strong>Palette + tempo</strong></div>
+        <div class="meta-rule"><span>ANIMATION</span><strong id="tempo">—</strong></div>
+        <p class="note"><strong>Preview only.</strong> There are no collector-selected parameters. The mint seed determines the palette and one of three loop tempos under the same fixed crosswave rule. Wallet and minting are not connected yet.</p>
+      </div>
+    </section>
+  </main>
+  <script src="project-config.js"></script>
+  <script src="generator.js"></script>
+  <script>
+    (() => {
+      const byId = id => document.getElementById(id);
+      function update() {
+        const seed = byId("seed").value || "neon-weather";
+        byId("artwork").innerHTML = window.NeonWeatherGen.renderSVG(seed);
+        byId("seed-label").textContent = `seed · ${seed}`;
+        const props = window.NeonWeatherGen.propertiesFor(seed);
+        byId("tempo").textContent = `${props.seconds}s loop · seed-derived`;
+        byId("swatches").replaceChildren(...window.NeonWeatherGen.buildPalette(seed, props.palette).map(color => {
+          const swatch = document.createElement("span"); swatch.className = "swatch"; swatch.style.background = color; swatch.title = color; return swatch;
+        }));
+      }
+      byId("randomize").addEventListener("click", () => {
+        byId("seed").value = String(Math.floor(Math.random() * 1e15)); update();
+      });
+      byId("seed").addEventListener("change", update);
+      update();
+    })();
+  </script>
+</body>
+</html>
