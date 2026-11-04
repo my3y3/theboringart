@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boring Onchain Checker — Tezos</title>
+  <style>
+    :root {
+      --bg: #f4f3ef;
+      --fg: #1a1a18;
+      --muted: #6e6e68;
+      --border: #d8d6cf;
+      --card: #fbfaf7;
+      --ok: #2a6b3c;
+      --warn: #8a6e1a;
+      --bad: #8a2e2e;
+      --accent: #1a1a18;
+      --code-bg: #ebe9e3;
+      --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      --radius: 3px;
+    }
+    [data-theme="dark"] {
+      --bg: #121211;
+      --fg: #e6e5e1;
+      --muted: #9a9890;
+      --border: #2a2a28;
+      --card: #1a1a18;
+      --ok: #5aad6e;
+      --warn: #d4a82a;
+      --bad: #d46a6a;
+      --accent: #e6e5e1;
+      --code-bg: #222220;
+      --shadow: 0 1px 2px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "IBM Plex Mono", "SF Mono", "Menlo", "Consolas", ui-monospace, monospace;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.55;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1.1rem 3.5rem;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 1.8rem;
+      max-width: 540px;
+      position: relative;
+      width: 100%;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.35rem;
+    }
+    .subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .theme-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.68rem;
+      padding: 0.32rem 0.6rem;
+      cursor: pointer;
+      border-radius: var(--radius);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .theme-btn:hover { color: var(--fg); border-color: var(--fg); }
+
+    /* Mode switcher */
+    .modes {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.4rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--card);
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 0.55rem 1rem;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .mode-btn:not(.active):hover { color: var(--fg); }
+
+    /* Network selector */
+    .network-wrap {
+      width: 100%;
+      max-width: 540px;
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+    .network-select {
+      appearance: none;
+      -webkit-appearance: none;
+      padding: 0.48rem 2rem 0.48rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      color: var(--fg);
+      font: inherit;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23888888' stroke-width='1.4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.55rem center;
+    }
+    .network-note { font-size: 0.65rem; color: var(--muted); }
+
+    .search-box {
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      gap: 0.55rem;
+      margin-bottom: 0.7rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.72rem 0.95rem;
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-family: inherit;
+      font-size: 0.82rem;
+      color: var(--fg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { outline: none; border-color: var(--fg); }
+    input[type="text"]::placeholder { color: var(--muted); opacity: 0.7; }
+    button#btn {
+      padding: 0.72rem 1.15rem;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      font-family: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      border-radius: var(--radius);
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    button#btn:hover { opacity: 0.88; }
+    button#btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .hint {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-bottom: 1.6rem;
+      max-width: 540px;
+      text-align: center;
+      line-height: 1.5;
+      min-height: 2.4em;
+    }
+    .hint code {
+      background: var(--code-bg);
+      padding: 0.12rem 0.35rem;
+      border-radius: 2px;
+      font-size: 0.64rem;
+    }
+
+    #status {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+      min-height: 1.15em;
+      text-align: center;
+    }
+
+    .result {
+      width: 100%;
+      max-width: 540px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.35rem 1.4rem 1.4rem;
+      box-shadow: var(--shadow);
+      display: none;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.28s ease, transform 0.28s ease;
+    }
+    .result.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .score {
+      font-size: 1.15rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+    }
+    .score.full { color: var(--ok); }
+    .score.partial { color: var(--warn); }
+    .score.off { color: var(--bad); }
+    .score-detail {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 1.1rem;
+      line-height: 1.45;
+    }
+
+    .verdicts {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-bottom: 1.1rem;
+    }
+    .verdict {
+      padding: 0.55rem 0.7rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border-left: 3px solid var(--border);
+    }
+    .verdict.full { border-left-color: var(--ok); }
+    .verdict.partial { border-left-color: var(--warn); }
+    .verdict.off { border-left-color: var(--bad); }
+    .verdict .v-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.12rem;
+    }
+    .verdict .v-text { font-size: 0.9rem; font-weight: 500; }
+    .verdict.full .v-text { color: var(--ok); }
+    .verdict.partial .v-text { color: var(--warn); }
+    .verdict.off .v-text { color: var(--bad); }
+    .verdict .v-detail {
+      font-size: 0.67rem;
+      color: var(--muted);
+      margin-top: 0.12rem;
+      line-height: 1.4;
+    }
+
+    .meta-row {
+      font-size: 0.74rem;
+      margin-bottom: 0.3rem;
+      display: flex;
+      gap: 0.55rem;
+    }
+    .meta-row .label {
+      color: var(--muted);
+      min-width: 86px;
+      flex-shrink: 0;
+    }
+    .meta-row .value { word-break: break-all; }
+
+    .links {
+      margin-top: 0.8rem;
+      font-size: 0.7rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .links a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .links a:hover { color: var(--fg); border-bottom-color: var(--fg); }
+
+    .section {
+      margin-top: 1.2rem;
+      padding-top: 0.95rem;
+      border-top: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.55rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toggle-raw {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.64rem;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .toggle-raw:hover { color: var(--fg); }
+
+    .uri-item {
+      font-size: 0.73rem;
+      margin-bottom: 0.45rem;
+      padding: 0.48rem 0.6rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+    }
+    .uri-item .kind { font-weight: 500; margin-bottom: 0.12rem; }
+    .uri-item .kind.onchain { color: var(--ok); }
+    .uri-item .kind.ipfs { color: var(--warn); }
+    .uri-item .kind.http { color: var(--bad); }
+    .uri-item .kind.unknown { color: var(--muted); }
+    .uri-item .url {
+      word-break: break-all;
+      color: var(--muted);
+      font-size: 0.66rem;
+      line-height: 1.4;
+    }
+
+    .preview { margin-top: 0.6rem; text-align: center; }
+    .preview img {
+      max-width: 100%;
+      max-height: 260px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+    [data-theme="dark"] .preview img { background: #1e1e1c; }
+
+    pre.raw {
+      font-size: 0.64rem;
+      background: var(--bg);
+      padding: 0.75rem;
+      overflow-x: auto;
+      border-radius: var(--radius);
+      max-height: 280px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      display: none;
+      border: 1px solid var(--border);
+      line-height: 1.45;
+    }
+    pre.raw.visible { display: block; }
+
+    .collection-list { font-size: 0.73rem; }
+    .collection-item {
+      padding: 0.42rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .collection-item:last-child { border-bottom: none; }
+    .collection-item button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.64rem;
+      padding: 0.18rem 0.48rem;
+      cursor: pointer;
+      border-radius: var(--radius);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .collection-item button:hover { color: var(--fg); border-color: var(--fg); }
+
+    footer {
+      margin-top: auto;
+      padding-top: 3rem;
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    footer a:hover { color: var(--fg); border-bottom-color: var(--fg); }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">dark</button>
+    <h1>Boring Onchain Checker</h1>
+    <p class="subtitle">Tezos · is the artwork on the chain?</p>
+  </header>
+
+  <div class="modes">
+    <button class="mode-btn active" id="modeGeneral" onclick="setMode('general')">General</button>
+    <button class="mode-btn" id="modeGen" onclick="setMode('generative')">Generative</button>
+  </div>
+
+  <div class="network-wrap">
+    <label for="networkSelect">NETWORK</label>
+    <select id="networkSelect" class="network-select" onchange="setNetwork(this.value)">
+      <option value="mainnet">Mainnet · Live</option>
+      <option value="shadownet">Shadownet · Test</option>
+    </select>
+    <span class="network-note" id="networkNote">Live Tezos data</span>
+  </div>
+
+  <div class="search-box">
+    <input
+      type="text"
+      id="input"
+      placeholder="Objkt / Teia / Aleatory / Bootloader URL · or KT1… tokenId"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button id="btn" onclick="analyze()">Check</button>
+  </div>
+  <p class="hint" id="hint">
+    Checks whether the artwork itself is stored on-chain.<br />
+    Paste any Tezos NFT link or <code>KT1… 123</code>.
+  </p>
+
+  <div id="status"></div>
+
+  <div class="result" id="result">
+    <!-- General mode score -->
+    <div id="generalScoreWrap">
+      <div class="score" id="score"></div>
+      <div class="score-detail" id="scoreDetail"></div>
+    </div>
+
+    <!-- Generative mode dual verdicts -->
+    <div class="verdicts" id="verdicts" style="display:none"></div>
+
+    <div id="basic"></div>
+    <div class="links" id="links"></div>
+
+    <div class="section" id="urisSection">
+      <div class="section-title">Media URIs</div>
+      <div id="uris"></div>
+    </div>
+
+    <div class="section" id="contractSection" style="display:none">
+      <div class="section-title">Contract-level findings</div>
+      <div id="contractFindings"></div>
+    </div>
+
+    <div class="section" id="previewSection" style="display:none">
+      <div class="section-title">Preview</div>
+      <div class="preview" id="preview"></div>
+    </div>
+
+    <div class="section" id="rawSection">
+      <div class="section-title">
+        Raw metadata
+        <button class="toggle-raw" onclick="toggleRaw()">show</button>
+      </div>
+      <pre class="raw" id="rawMeta"></pre>
+    </div>
+
+    <div class="section" id="collectionSection" style="display:none">
+      <div class="section-title">Recent tokens in this contract</div>
+      <div class="collection-list" id="collectionList"></div>
+    </div>
+  </div>
+
+  <footer>
+    boring onchain checker · v0.5<br />
+    data via <a href="https://tzkt.io" target="_blank" rel="noopener">TzKT</a>
+    · not affiliated with anyone<br />
+    just checks if the bytes actually live on Tezos<br /><br />
+    made by PXL · <a href="https://x.com/My_3y3" target="_blank" rel="noopener">@My_3y3</a>
+  </footer>
+
+  <script>
+    const NETWORKS = {
+      mainnet: {
+        label: "Mainnet",
+        tzkt: "https://api.tzkt.io/v1",
+        explorer: "https://tzkt.io",
+        betterCall: "https://better-call.dev/mainnet",
+        objkt: true
+      },
+      shadownet: {
+        label: "Shadownet",
+        tzkt: "https://api.shadownet.tzkt.io/v1",
+        explorer: "https://shadownet.tzkt.io",
+        betterCall: "https://better-call.dev/shadownet",
+        objkt: false
+      }
+    };
+    let currentNetwork = "mainnet";
+    let currentMode = "general";
+
+    function setNetwork(network) {
+      if (!NETWORKS[network]) return;
+      currentNetwork = network;
+      document.getElementById("networkSelect").value = network;
+      document.getElementById("networkNote").textContent =
+        network === "mainnet" ? "Live Tezos data" : "Test network data";
+      document.getElementById("hint").innerHTML = currentMode === "general"
+        ? 'Checks whether the <em>artwork itself</em> is stored on-chain.<br />Paste a Tezos NFT link or <code>KT1… 123</code>.'
+        : 'Checks metadata media <em>and</em> whether generative code lives in the contract.<br />Useful for generative contracts and experiments.';
+      document.getElementById("result").classList.remove("visible");
+      document.getElementById("status").textContent = "";
+    }
+
+    function networkLinks(contract, tokenId = null) {
+      const n = NETWORKS[currentNetwork];
+      const links = [
+        `<a href="${n.explorer}/${contract}${tokenId !== null ? `/tokens/${tokenId}` : ""}" target="_blank" rel="noopener">TzKT · ${n.label}</a>`,
+        `<a href="${n.betterCall}/${contract}/storage" target="_blank" rel="noopener">Better Call Dev</a>`
+      ];
+      if (n.objkt && tokenId !== null) {
+        links.push(`<a href="https://objkt.com/tokens/${contract}/${tokenId}" target="_blank" rel="noopener">Objkt</a>`);
+      } else if (n.objkt) {
+        links.push(`<a href="https://objkt.com/collections/${contract}" target="_blank" rel="noopener">Objkt</a>`);
+      }
+      return links.join("");
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", next === "dark" ? "dark" : "");
+      document.getElementById("themeBtn").textContent = next === "dark" ? "light" : "dark";
+      localStorage.setItem("boc-theme", next);
+    }
+    (function initTheme() {
+      if (localStorage.getItem("boc-theme") === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeBtn").textContent = "light";
+      }
+    })();
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById("modeGeneral").classList.toggle("active", mode === "general");
+      document.getElementById("modeGen").classList.toggle("active", mode === "generative");
+      document.getElementById("hint").innerHTML = mode === "general"
+        ? 'Checks whether the <em>artwork itself</em> is stored on-chain.<br />Paste any Tezos NFT link or <code>KT1… 123</code>.'
+        : 'Checks metadata media <em>and</em> whether generative code lives in the contract.<br />Useful for Aleatory, Bootloader, and similar projects.';
+      // clear previous result when switching
+      document.getElementById("result").classList.remove("visible");
+      document.getElementById("status").textContent = "";
+    }
+
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg || "";
+    }
+
+    function escapeHtml(str) {
+      if (str == null) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function classifyUri(uri) {
+      if (!uri || typeof uri !== "string") return { kind: "unknown", label: "missing" };
+      const u = uri.trim().toLowerCase();
+      if (u.startsWith("data:")) return { kind: "onchain", label: "fully on-chain (data:)" };
+      if (u.startsWith("tezos-storage:") || u.startsWith("onchfs://"))
+        return { kind: "onchain", label: "on-chain storage / filesystem" };
+      if (u.startsWith("ipfs://") || u.startsWith("/ipfs/")) return { kind: "ipfs", label: "IPFS" };
+      if (u.startsWith("http://") || u.startsWith("https://")) return { kind: "http", label: "HTTP / centralized" };
+      return { kind: "unknown", label: "other / unknown" };
+    }
+
+    function parseInput(raw) {
+      raw = raw.trim();
+      if (!raw) return null;
+
+      let m = raw.match(/aleatory\.art\/(?:piece|generator)\/(KT1[0-9A-Za-z]{33})(?:\/(\d+))?/i);
+      if (m) return { contract: m[1], tokenId: m[2] || null };
+
+      m = raw.match(/bootloader\.art\/(?:generator|piece)\/[^\s/]*\/?(\d+)?/i);
+      // bootloader often uses shared contract — fall through to generic
+
+      m = raw.match(/objkt\.com\/(?:tokens|asset|collections)\/(KT1[0-9A-Za-z]{33})(?:\/(\d+))?/i);
+      if (m) return { contract: m[1], tokenId: m[2] || null };
+
+      m = raw.match(/(?:teia\.art|hicetnunc\.xyz|hen\.tez)\/objkt\/(\d+)/i);
+      if (m) return { contract: "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton", tokenId: m[1] };
+
+      m = raw.match(/fxhash\.xyz\/(?:gentk|generative|u)\/(?:slug\/)?(?:(KT1[0-9A-Za-z]{33})\/)?(\d+)/i);
+      if (m && m[1]) return { contract: m[1], tokenId: m[2] };
+
+      m = raw.match(/(KT1[0-9A-Za-z]{33}).*?[\/#\s](\d+)/i);
+      if (m) return { contract: m[1], tokenId: m[2] };
+
+      m = raw.match(/^(KT1[0-9A-Za-z]{33})\s*[\/\s#]?\s*(\d+)?$/i);
+      if (m) return { contract: m[1], tokenId: m[2] || null };
+
+      return { error: "Could not parse. Try a full link or KT1… 123" };
+    }
+
+    async function fetchToken(contract, tokenId) {
+      const res = await fetch(`${NETWORKS[currentNetwork].tzkt}/tokens?contract=${contract}&tokenId=${tokenId}&limit=1`);
+      if (!res.ok) throw new Error(`TzKT ${res.status}`);
+      const data = await res.json();
+      if (!data || !data.length) throw new Error("Token not found");
+      return data[0];
+    }
+
+    function decodeBigMapBytes(value) {
+      if (typeof value !== "string") return value;
+      const hex = value.startsWith("0x") ? value.slice(2) : value;
+      if (!hex || hex.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(hex)) return value;
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+      return new TextDecoder().decode(bytes);
+    }
+
+    async function fetchStorage(contract) {
+      try {
+        const api = NETWORKS[currentNetwork].tzkt;
+        const res = await fetch(`${api}/contracts/${contract}/storage`);
+        if (!res.ok) return null;
+        const storage = await res.json();
+
+        // TzKT returns big-map pointers in contract storage, not their contents.
+        // Resolve the contract metadata big-map so tezos-storage:<key> references
+        // can be followed and checked instead of only scanning inline fields.
+        try {
+          const mapsRes = await fetch(`${api}/contracts/${contract}/bigmaps`);
+          if (!mapsRes.ok) throw new Error(`big-map index returned ${mapsRes.status}`);
+          const maps = await mapsRes.json();
+          const metadataMap = maps.find(m => m.path === "metadata" && m.active);
+          if (!metadataMap) {
+            storage.__metadataBigMap = [];
+            return storage;
+          }
+          const keysRes = await fetch(`${api}/bigmaps/${metadataMap.ptr}/keys?limit=1000`);
+          if (!keysRes.ok) throw new Error(`metadata big-map returned ${keysRes.status}`);
+          const keys = await keysRes.json();
+          storage.__metadataBigMap = keys
+            .filter(entry => entry.active !== false)
+            .map(entry => ({ key: String(entry.key), value: decodeBigMapBytes(entry.value) }));
+        } catch (e) {
+          storage.__metadataBigMapError = e.message || String(e);
+        }
+        return storage;
+      } catch { return null; }
+    }
+
+    async function fetchRecentTokens(contract, limit = 8) {
+      const res = await fetch(`${NETWORKS[currentNetwork].tzkt}/tokens?contract=${contract}&sort.desc=id&limit=${limit}`);
+      if (!res.ok) return [];
+      return await res.json();
+    }
+
+    function collectUris(meta) {
+      const uris = [];
+      if (!meta) return uris;
+      const keys = ["artifactUri", "displayUri", "thumbnailUri", "image", "animation_url", "imageUri"];
+      for (const k of keys) {
+        if (meta[k]) uris.push({ role: k, uri: meta[k] });
+      }
+      if (Array.isArray(meta.formats)) {
+        meta.formats.forEach((f, i) => {
+          if (f.uri) uris.push({ role: `formats[${i}] (${f.mimeType || "?"})`, uri: f.uri });
+        });
+      }
+      const seen = new Set();
+      return uris.filter(u => {
+        if (seen.has(u.uri)) return false;
+        seen.add(u.uri);
+        return true;
+      });
+    }
+
+    function scoreUris(uris) {
+      if (!uris.length) {
+        return { level: "off", text: "No media URIs found", detail: "Metadata may be missing or non-standard." };
+      }
+      const main = uris.find(u => u.role === "artifactUri")
+        || uris.find(u => u.role === "displayUri")
+        || uris.find(u => u.role.startsWith("formats"))
+        || uris[0];
+      const mainKind = classifyUri(main.uri).kind;
+      const kinds = new Set(uris.map(u => classifyUri(u.uri).kind));
+
+      if (mainKind === "onchain" && !kinds.has("http")) {
+        return { level: "full", text: "Fully on-chain", detail: "The artwork itself is stored as a data: URI (or tezos-storage) on the chain." };
+      }
+      if (mainKind === "onchain") {
+        return { level: "partial", text: "Main media on-chain", detail: "Primary artwork is on-chain; some secondary links are off-chain." };
+      }
+      if (kinds.has("onchain")) {
+        return { level: "partial", text: "Partially on-chain", detail: "Some media is on-chain, but the main artwork is not." };
+      }
+      if (kinds.has("ipfs") && !kinds.has("http")) {
+        return { level: "partial", text: "IPFS", detail: "Artwork is on IPFS — decentralized, but not stored on the Tezos chain itself." };
+      }
+      return { level: "off", text: "Off-chain", detail: "Artwork relies on HTTP or other centralized storage." };
+    }
+
+    async function analyzeStorage(storage) {
+      const findings = [];
+      if (!storage) {
+        return { level: "off", text: "Could not read storage", detail: "", findings: [] };
+      }
+
+      function walk(obj, path) {
+        if (obj == null) return;
+        if (typeof obj === "string") {
+          const lower = obj.toLowerCase();
+          const len = obj.length;
+          if (obj.startsWith("1f8b08") || obj.startsWith("H4sI")) {
+            findings.push({ path, kind: "gzip-code", label: "Compressed code / data (gzip)", size: len });
+            return;
+          }
+          if (lower.startsWith("data:")) {
+            findings.push({ path, kind: "data-uri", label: "data: URI in storage", size: len });
+            return;
+          }
+          if (len > 2000) {
+            const name = path.split(".").pop().toLowerCase();
+            if (["code", "source", "script", "generator", "svg", "html", "js", "javascript", "artwork", "art"].some(k => name.includes(k))) {
+              findings.push({ path, kind: "large-code", label: "Large code / source field", size: len });
+            } else if (lower.includes("<svg") || lower.includes("function ") || lower.includes("const ")) {
+              findings.push({ path, kind: "large-code", label: "Large field containing code/SVG", size: len });
+            }
+          }
+          return;
+        }
+        if (Array.isArray(obj)) {
+          obj.forEach((v, i) => walk(v, `${path}[${i}]`));
+          return;
+        }
+        if (typeof obj === "object") {
+          for (const [k, v] of Object.entries(obj)) {
+            if (k === "__metadataBigMap" || k === "__metadataBigMapError") continue;
+            walk(v, path ? `${path}.${k}` : k);
+          }
+        }
+      }
+      walk(storage, "");
+
+      if (storage.art && storage.art.code) {
+        if (!findings.some(f => f.path.includes("art.code"))) {
+          findings.push({
+            path: "art.code",
+            kind: "aleatory",
+            label: "Aleatory-style generative code",
+            size: String(storage.art.code).length
+          });
+        }
+      }
+
+      // Resolve the TZIP-16 metadata document, then follow a declared
+      // tezos-storage URI such as generator.uri -> generator.js.
+      const metadataEntries = storage.__metadataBigMap;
+      let metadataJson = null;
+      if (Array.isArray(metadataEntries) && metadataEntries.length) {
+        const values = new Map(metadataEntries.map(entry => [entry.key, entry.value]));
+        const emptyValue = values.get("");
+        let contentKey = "content";
+        if (typeof emptyValue === "string" && emptyValue.startsWith("tezos-storage:")) {
+          contentKey = emptyValue.slice("tezos-storage:".length) || "content";
+        }
+        const candidates = [values.get(contentKey), ...values.values()];
+        for (const candidate of candidates) {
+          if (typeof candidate !== "string") continue;
+          try {
+            const parsed = JSON.parse(candidate);
+            if (parsed && typeof parsed === "object") { metadataJson = parsed; break; }
+          } catch {}
+        }
+
+        const generator = metadataJson && metadataJson.generator;
+        const generatorUri = generator && (generator.uri || generator.codeUri || generator.code_uri);
+        if (typeof generatorUri === "string" && generatorUri.startsWith("tezos-storage:")) {
+          const sourceKey = generatorUri.slice("tezos-storage:".length);
+          const source = values.get(sourceKey);
+          if (typeof source === "string" && source.length) {
+            const expectedHash = String(generator.sha256 || generator.codeHash || generator.code_hash || "").replace(/^sha256[-:]/i, "").toLowerCase();
+            let hashNote = "source bytes found via TZIP-16 tezos-storage reference";
+            let verified = false;
+            if (expectedHash && globalThis.crypto?.subtle) {
+              const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(source));
+              const actualHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+              verified = actualHash === expectedHash;
+              hashNote = verified ? "SHA-256 matches collection metadata" : `SHA-256 mismatch (expected ${expectedHash}, got ${actualHash})`;
+            } else if (!expectedHash) {
+              hashNote = "source bytes found; collection metadata has no SHA-256 to verify";
+            } else {
+              hashNote = "source bytes found; browser SHA-256 is unavailable";
+            }
+            findings.push({
+              path: `metadata["${sourceKey}"]`,
+              kind: "resolved-source",
+              label: verified ? "Generator source found and SHA-256 verified" : "Generator source found through metadata URI",
+              detail: hashNote,
+              size: new TextEncoder().encode(source).length,
+              verified
+            });
+          }
+        }
+      }
+
+      if (findings.length === 0) {
+        if (storage.__metadataBigMapError) {
+          return {
+            level: "partial",
+            text: "Storage scan incomplete",
+            detail: `Could not inspect the TZIP-16 metadata big map: ${storage.__metadataBigMapError}`,
+            findings: []
+          };
+        }
+        return {
+          level: "off",
+          text: "No on-chain code detected",
+          detail: "Contract storage does not appear to hold generative code or large on-chain artwork.",
+          findings: []
+        };
+      }
+      const hasCode = findings.some(f => ["gzip-code", "large-code", "aleatory", "resolved-source"].includes(f.kind));
+      const hasArtwork = findings.some(f => f.kind === "data-uri");
+      const hashMismatch = findings.some(f => f.kind === "resolved-source" && !f.verified && /mismatch/.test(f.detail));
+      return {
+        level: (hasCode || hasArtwork) && !hashMismatch ? "full" : "partial",
+        text: hashMismatch ? "Generator source hash mismatch" : hasCode ? "On-chain generator source found" : hasArtwork ? "On-chain artwork data found" : "Some on-chain data found",
+        detail: findings.map(f => `${f.label} at ${f.path} (${f.size.toLocaleString()} bytes)${f.detail ? ` — ${f.detail}` : ""}`).join(" · "),
+        findings
+      };
+    }
+
+    function toggleRaw() {
+      const pre = document.getElementById("rawMeta");
+      const btn = document.querySelector(".toggle-raw");
+      const show = !pre.classList.contains("visible");
+      pre.classList.toggle("visible", show);
+      btn.textContent = show ? "hide" : "show";
+    }
+
+    async function analyze() {
+      const input = document.getElementById("input").value;
+      const btn = document.getElementById("btn");
+      const resultEl = document.getElementById("result");
+      resultEl.classList.remove("visible");
+      setStatus("");
+
+      const parsed = parseInput(input);
+      if (!parsed) { setStatus("Paste something first."); return; }
+      if (parsed.error) { setStatus(parsed.error); return; }
+
+      btn.disabled = true;
+
+      // Collection peek
+      if (!parsed.tokenId) {
+        setStatus("Loading recent tokens…");
+        try {
+          const tokens = await fetchRecentTokens(parsed.contract, 10);
+          if (!tokens.length) throw new Error("No tokens found for this contract");
+
+          document.getElementById("generalScoreWrap").style.display = "block";
+          document.getElementById("verdicts").style.display = "none";
+          document.getElementById("score").className = "score";
+          document.getElementById("score").textContent = "Collection peek";
+          document.getElementById("scoreDetail").textContent = `Showing ${tokens.length} most recent tokens. Click one to check it.`;
+          document.getElementById("basic").innerHTML = `<div class="meta-row"><span class="label">contract</span><span class="value">${parsed.contract}</span></div>`;
+          document.getElementById("links").innerHTML = networkLinks(parsed.contract);
+
+          document.getElementById("urisSection").style.display = "none";
+          document.getElementById("contractSection").style.display = "none";
+          document.getElementById("previewSection").style.display = "none";
+          document.getElementById("rawSection").style.display = "none";
+
+          document.getElementById("collectionList").innerHTML = tokens.map(t => {
+            const name = (t.metadata && t.metadata.name) ? escapeHtml(t.metadata.name) : "—";
+            return `<div class="collection-item">
+              <span>#${t.tokenId} · ${name}</span>
+              <button onclick="checkToken('${parsed.contract}', '${t.tokenId}')">check</button>
+            </div>`;
+          }).join("");
+          document.getElementById("collectionSection").style.display = "block";
+
+          requestAnimationFrame(() => resultEl.classList.add("visible"));
+          setStatus("");
+        } catch (err) {
+          setStatus("Error: " + err.message);
+        } finally {
+          btn.disabled = false;
+        }
+        return;
+      }
+
+      // Single token
+      setStatus(currentMode === "generative" ? "Looking up token + contract storage…" : "Looking up token…");
+      try {
+        const tokenPromise = fetchToken(parsed.contract, parsed.tokenId);
+        const storagePromise = currentMode === "generative" ? fetchStorage(parsed.contract) : Promise.resolve(null);
+        const [token, storage] = await Promise.all([tokenPromise, storagePromise]);
+
+        const meta = token.metadata || {};
+        const uris = collectUris(meta);
+        const metaScore = scoreUris(uris);
+
+        // Mode-specific score display
+        if (currentMode === "general") {
+          document.getElementById("generalScoreWrap").style.display = "block";
+          document.getElementById("verdicts").style.display = "none";
+          const scoreEl = document.getElementById("score");
+          scoreEl.className = "score " + metaScore.level;
+          scoreEl.textContent = metaScore.text;
+          document.getElementById("scoreDetail").textContent = metaScore.detail;
+          document.getElementById("contractSection").style.display = "none";
+        } else {
+          document.getElementById("generalScoreWrap").style.display = "none";
+          document.getElementById("verdicts").style.display = "flex";
+          const contractScore = await analyzeStorage(storage);
+          document.getElementById("verdicts").innerHTML = `
+            <div class="verdict ${metaScore.level}">
+              <div class="v-label">Metadata media (preview / image)</div>
+              <div class="v-text">${metaScore.text}</div>
+              <div class="v-detail">${metaScore.detail}</div>
+            </div>
+            <div class="verdict ${contractScore.level}">
+              <div class="v-label">Generator source / contract storage</div>
+              <div class="v-text">${contractScore.text}</div>
+              <div class="v-detail">${contractScore.detail || "—"}</div>
+            </div>`;
+
+          if (contractScore.findings && contractScore.findings.length) {
+            document.getElementById("contractSection").style.display = "block";
+            document.getElementById("contractFindings").innerHTML = contractScore.findings.map(f =>
+              `<div class="uri-item">
+                <div class="kind onchain">${escapeHtml(f.label)}</div>
+                <div class="url">${escapeHtml(f.path)} · ${f.size.toLocaleString()} bytes</div>
+              </div>`
+            ).join("");
+          } else {
+            document.getElementById("contractSection").style.display = "none";
+          }
+        }
+
+        // Basic info
+        let basicHtml = `
+          <div class="meta-row"><span class="label">name</span><span class="value">${escapeHtml(meta.name || "—")}</span></div>
+          <div class="meta-row"><span class="label">contract</span><span class="value">${token.contract.address}</span></div>
+          <div class="meta-row"><span class="label">token id</span><span class="value">${token.tokenId}</span></div>
+          <div class="meta-row"><span class="label">standard</span><span class="value">${token.standard || "—"}</span></div>`;
+        if (meta.symbol) basicHtml += `<div class="meta-row"><span class="label">symbol</span><span class="value">${escapeHtml(meta.symbol)}</span></div>`;
+        if (meta.creators && meta.creators.length) {
+          basicHtml += `<div class="meta-row"><span class="label">creators</span><span class="value">${meta.creators.map(escapeHtml).join(", ")}</span></div>`;
+        }
+        if (meta.mimeType) basicHtml += `<div class="meta-row"><span class="label">mime</span><span class="value">${escapeHtml(meta.mimeType)}</span></div>`;
+        if (token.totalSupply) basicHtml += `<div class="meta-row"><span class="label">supply</span><span class="value">${token.totalSupply}</span></div>`;
+        document.getElementById("basic").innerHTML = basicHtml;
+
+        document.getElementById("links").innerHTML = networkLinks(token.contract.address, token.tokenId);
+
+        // URIs
+        document.getElementById("urisSection").style.display = "block";
+        let urisHtml = "";
+        if (!uris.length) {
+          urisHtml = `<div class="uri-item"><span class="kind unknown">no media URIs found in metadata</span></div>`;
+        } else {
+          uris.forEach(u => {
+            const c = classifyUri(u.uri);
+            const short = u.uri.length > 110 ? u.uri.slice(0, 107) + "…" : u.uri;
+            urisHtml += `<div class="uri-item">
+              <div class="kind ${c.kind}">${escapeHtml(u.role)} → ${c.label}</div>
+              <div class="url">${escapeHtml(short)}</div>
+            </div>`;
+          });
+        }
+        document.getElementById("uris").innerHTML = urisHtml;
+
+        // Preview
+        const previewSection = document.getElementById("previewSection");
+        const preview = document.getElementById("preview");
+        preview.innerHTML = "";
+        const mainUri = (uris.find(u => u.role === "displayUri") || uris.find(u => u.role === "artifactUri") || uris[0])?.uri;
+        if (mainUri && mainUri.startsWith("data:image")) {
+          preview.innerHTML = `<img src="${mainUri}" alt="preview" />`;
+          previewSection.style.display = "block";
+        } else if (mainUri && mainUri.startsWith("data:")) {
+          preview.innerHTML = `<p style="font-size:0.7rem;color:var(--muted)">data: URI present (non-image or complex)</p>`;
+          previewSection.style.display = "block";
+        } else {
+          previewSection.style.display = "none";
+        }
+
+        // Raw
+        document.getElementById("rawSection").style.display = "block";
+        document.getElementById("rawMeta").textContent = JSON.stringify(meta, null, 2);
+        document.getElementById("rawMeta").classList.remove("visible");
+        document.querySelector(".toggle-raw").textContent = "show";
+        document.getElementById("collectionSection").style.display = "none";
+
+        requestAnimationFrame(() => resultEl.classList.add("visible"));
+        setStatus("");
+      } catch (err) {
+        setStatus("Error: " + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function checkToken(contract, tokenId) {
+      document.getElementById("input").value = `${contract} ${tokenId}`;
+      analyze();
+    }
+
+    document.getElementById("input").addEventListener("keydown", e => {
+      if (e.key === "Enter") analyze();
+    });
+  </script>
+</body>
+</html>
